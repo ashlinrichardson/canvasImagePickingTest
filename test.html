@@ -1,15 +1,43 @@
 <html>
-
-<head>
-</head>
 <canvas width="400" height="400"></canvas>
 <script>
+
+/*=================================================================================================
+ * SOFTWARE PARAMETERS
+ *===============================================================================================*/
+
+/* random words */
+var words = ['instrument','excited','peep','reply','vase','airport','elfin','cow','married','careless','file','increase','arch','attract','statuesque','story','frail','women','bouncy','disappear','gaping','angry','friendly','door','paltry','aquatic','zinc','title','slow','calculating','oven','light','unite','hesitant','quixotic','vagabond','acrid','bag','psychotic','whole','moor','squealing','shock','third','muddled','tasty','fallacious','scare','cover',];
+
+/* number of images */ 
+nImages = 12;  // e.g., if nImages=12, there are 12 images: image00.jpg to image11.jpg.
+
+/*=================================================================================================
+ * AESTHETIC PARAMETERS
+ *===============================================================================================*/
+
+var imageSpacing = 10; // spacing (number of pixels) between images displayed on a grid.
+
+/*=================================================================================================
+ * BEGIN PROGRAM
+ *===============================================================================================*/
+
+/* load the images...  */
+  var images = new Array(nImages);
+  for (var j = 0; j < nImages; j++) {
+    fileName = ("images/image" + (j < 10 ? "0" : "")) + (j.toString()) + ".jpg";
+    images[j] = new Image();
+    images[j].src = fileName;
+  }
+
+
+
   var screenHeight = screen.height;
   var screenWidth = screen.width;
 
   /* speech synthesis */
   if (false) {
-    var msg = new SpeechSynthesisUtterance('Hello ');
+    var msg = new SpeechSynthesisUtterance('Start ');
     window.speechSynthesis.speak(msg);
   }
 
@@ -272,21 +300,13 @@
   var movingAverage = 0.;
   var t1 = window.performance.now(); /* time stamp.... */
   var i = 0;
-
-  /*   load images... */
-  nImages = 12;
-  var images = new Array(nImages);
-  for (var j = 0; j < nImages; j++) {
-    fileName = ("images/image" + (j < 10 ? "0" : "")) + (j.toString()) + ".jpg";
-    images[j] = new Image();
-    images[j].src = fileName;
-  }
+  var t2 = t1; 
+  var imageSize = 200; /* default square image display size (treat images as if they were square). */
+  var imagesPerRow = 4; //default number of columns for grid image display... 
 
   /*  animation loop  */
   function frame() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    /* check keyboard 
+    /* check keyboard  ? 
     var wasdPressed = [ 
       (keyboard['W'] || keyboard['w'] ),
       (keyboard['A'] || keyboard['a'] ),
@@ -294,39 +314,42 @@
       (keyboard['D'] || keyboard['d'] ) 
     ];
     */
-
+    
+    i += 1;
+    var w = window.innerWidth;
+    var h = window.innerHeight; 
+    canvas.width  = w;
+    canvas.height = h;
+    imageSize = Math.floor( Math.sqrt( Math.floor( w*h / ((nImages*2))))); 
+    imagesPerRow = Math.floor( w / (imageSize + 1.5*imageSpacing));
+    var nRows = Math.ceil( nImages / imagesPerRow );
+    var nCols = imagesPerRow;
+    imageSize = Math.min( h/nRows, w/nCols ) -1.5*imageSpacing;
     context.clearRect(0, 0, canvas.width, canvas.height);
     document.bgColor = "#FFFFFF"; //"#000000"
-    function rad(degrees) {
-      return (degrees * Math.PI) / 180;
-    }
-
-    /* update physics */
-    /* set up the pen! */
-    //context.strokeStyle="red";//"#FFFFFF";
-    context.lineWidth = 2; //circleWidth;
-
-    var t2 = window.performance.now(); //console.timeEnd("frameTime");
-    movingAverage = (movingAverage + (t2 - t1)) / 2.;
-    //estBPM = 30000. /( pW * movingAverage);
-    i += 1;
+  
     k = 0;
     for (var j = 0; j < nImages; j++) {
-      context.drawImage(images[j], (j % 5) * 200 + ((j % 5) * 10), (k % 10) * 200 + (k % 10) * 10, 200, 200);
-      if (j % 5 == 4) k += 1;
+      var imageX = (j % imagesPerRow) * imageSize + ((j % imagesPerRow) * imageSpacing);
+      var imageY = (k % nImages) * imageSize + (k % nImages)*imageSpacing;
+      context.drawImage( images[j], imageX, imageY, imageSize, imageSize);
+      if (j % imagesPerRow == (imagesPerRow-1)){
+        k += 1;
+      }
     }
-
+    if (i % 800 == 0) {
+      audio[0].play();
+    }
+    t2 = window.performance.now(); 
+    movingAverage = (movingAverage + (t2 - t1)) / 2.;
     if (i % 100 == 0) {
       console.log(movingAverage.toString().concat(" mS = ").concat((1. / (movingAverage / 1000.))).concat(" fpS"));
 
     }
-    if (i % 1000 == 0) {
-      audio[0].play();
-      // console.log(1movingAverage.toString().concat(" mS") );    
-    }
     t1 = t2;
   } /* function FRAME */
-  var id = setInterval(frame, 0); //http://javascript.info/tutorial/settimeout-setinterval
-</script>
 
+  var id = setInterval(frame, 0); //http://javascript.info/tutorial/settimeout-setinterval
+
+</script>
 </html>
