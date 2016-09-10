@@ -58,7 +58,7 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     if ((tem = ua.match(/version\/(\d+)/i)) != null) M.splice(1, 1, tem[1]);
     return M.join(' ');
   })();
-  console.log((navigator.sayswho).split(" ")[0]);
+  //console.log((navigator.sayswho).split(" ")[0]);
 
   /* from http://stackoverflow.com/questions/1828613/check-if-a-key-is-down  */
   function keyboard_module(onUpdate) {
@@ -94,7 +94,7 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
   }
 
   function testing(kb) {
-    console.log('These keys are down: ', kb);
+    //console.log('These keys are down: ', kb);
   }
 
   var keyboard = keyboard_module(testing);
@@ -301,10 +301,20 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
   var t1 = window.performance.now(); /* time stamp.... */
   var i = 0;
   var t2 = t1; 
+
+
+  /* variables used in image plotting and picking...  */
   var imageSize = 200; /* default square image display size (treat images as if they were square). */
   var imagesPerRow = 4; //default number of columns for grid image display... 
+  var nRows, nCols; 
 
+  canvas.addEventListener("mousedown", function(e){
+        if(e.clientX <= 0){
+        }
+        if(e.clientY <= 0){
+        }
 
+  });
 
   /*  animation loop  */
   function frame() {
@@ -324,8 +334,8 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     canvas.height = h;
     imageSize = Math.floor( Math.sqrt( Math.floor( w*h / ((nImages*2))))); 
     imagesPerRow = Math.floor( w / (imageSize + 1.5*imageSpacing));
-    var nRows = Math.ceil( nImages / imagesPerRow );
-    var nCols = imagesPerRow;
+    nRows = Math.ceil( nImages / imagesPerRow );
+    nCols = imagesPerRow;
     imageSize = Math.min( h/nRows, w/nCols ) -1.5*imageSpacing;
     context.clearRect(0, 0, canvas.width, canvas.height);
     document.bgColor = "#FFFFFF"; //"#000000"
@@ -345,7 +355,7 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     t2 = window.performance.now(); 
     movingAverage = (movingAverage + (t2 - t1)) / 2.;
     if (i % 100 == 0) {
-      console.log(movingAverage.toString().concat(" mS = ").concat((1. / (movingAverage / 1000.))).concat(" fpS"));
+      if(false)console.log(movingAverage.toString().concat(" mS = ").concat((1. / (movingAverage / 1000.))).concat(" fpS"));
 
     }
     t1 = t2;
