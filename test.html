@@ -1,0 +1,332 @@
+<html>
+
+<head>
+</head>
+<canvas width="400" height="400"></canvas>
+<script>
+  var screenHeight = screen.height;
+  var screenWidth = screen.width;
+
+  /* speech synthesis */
+  if (false) {
+    var msg = new SpeechSynthesisUtterance('Hello ');
+    window.speechSynthesis.speak(msg);
+  }
+
+  /* function to detect browser. */
+  navigator.sayswho = (function() {
+    var ua = navigator.userAgent,
+      tem,
+      M = ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+    if (/trident/i.test(M[1])) {
+      tem = /\brv[ :]+(\d+)/g.exec(ua) || [];
+      return 'IE ' + (tem[1] || '');
+    }
+    if (M[1] === 'Chrome') {
+      tem = ua.match(/\b(OPR|Edge)\/(\d+)/);
+      if (tem != null) return tem.slice(1).join(' ').replace('OPR', 'Opera');
+    }
+    M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+    if ((tem = ua.match(/version\/(\d+)/i)) != null) M.splice(1, 1, tem[1]);
+    return M.join(' ');
+  })();
+  console.log((navigator.sayswho).split(" ")[0]);
+
+  /* from http://stackoverflow.com/questions/1828613/check-if-a-key-is-down  */
+  function keyboard_module(onUpdate) {
+    var kb = {};
+    var unicode_mapping = {};
+    document.onkeydown = function(e) {
+      var unicode = e.charCode ? e.charCode : e.keyCode
+      var key = getKey(unicode);
+      kb[key] = true;
+      if (onUpdate) {
+        onUpdate(kb);
+      }
+      //alert(key);
+    }
+    document.onkeyup = function(e) {
+      var unicode = e.charCode ? e.charCode : e.keyCode
+      var key = getKey(unicode);
+      delete kb[key];
+      if (onUpdate) {
+        onUpdate(kb);
+      }
+    }
+
+    function getKey(unicode) {
+      if (unicode_mapping[unicode]) {
+        var key = unicode_mapping[unicode];
+      } else {
+        var key = unicode_mapping[unicode] = String.fromCharCode(unicode);
+      }
+      return key;
+    }
+    return kb;
+  }
+
+  function testing(kb) {
+    console.log('These keys are down: ', kb);
+  }
+
+  var keyboard = keyboard_module(testing);
+
+  /* RIFFWAVE.js v0.03 copyleft 2011 by Pedro Ladaria */
+  var FastBase64 = {
+    chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+    encLookup: [],
+    Init: function() {
+      for (var i = 0; i < 4096; i++) {
+        this.encLookup[i] = this.chars[i >> 6] + this.chars[i & 0x3F];
+      }
+    },
+    Encode: function(src) {
+        var len = src.length;
+        var dst = '';
+        var i = 0;
+        while (len > 2) {
+          n = (src[i] << 16) | (src[i + 1] << 8) | src[i + 2];
+          dst += this.encLookup[n >> 12] + this.encLookup[n & 0xFFF];
+          len -= 3;
+          i += 3;
+        }
+        if (len > 0) {
+          var n1 = (src[i] & 0xFC) >> 2;
+          var n2 = (src[i] & 0x03) << 4;
+          if (len > 1) n2 |= (src[++i] & 0xF0) >> 4;
+          dst += this.chars[n1];
+          dst += this.chars[n2];
+          if (len == 2) {
+            var n3 = (src[i++] & 0x0F) << 2;
+            n3 |= (src[i] & 0xC0) >> 6;
+            dst += this.chars[n3];
+          }
+          if (len == 1) dst += '=';
+          dst += '=';
+        }
+        return dst;
+      } // end Encode
+  }
+  FastBase64.Init();
+
+  /* RIFFWAVE.js v0.03 copyleft 2011 by Pedro Ladaria */
+  var RIFFWAVE = function(data) {
+    this.data = []; // Array containing audio samples
+    this.wav = []; // Array containing the generated wave file
+    this.dataURI = ''; // http://en.wikipedia.org/wiki/Data_URI_scheme
+    this.header = { // OFFS SIZE NOTES
+      chunkId: [0x52, 0x49, 0x46, 0x46], // 0    4    "RIFF" = 0x52494646
+      chunkSize: 0, // 4    4    36+SubChunk2Size = 4+(8+SubChunk1Size)+(8+SubChunk2Size)
+      format: [0x57, 0x41, 0x56, 0x45], // 8    4    "WAVE" = 0x57415645
+      subChunk1Id: [0x66, 0x6d, 0x74, 0x20], // 12   4    "fmt " = 0x666d7420
+      subChunk1Size: 16, // 16   4    16 for PCM
+      audioFormat: 1, // 20   2    PCM = 1
+      numChannels: 1, // 22   2    Mono = 1, Stereo = 2...
+      sampleRate: 8000, // 24   4    8000, 44100...
+      byteRate: 0, // 28   4    SampleRate*NumChannels*BitsPerSample/8
+      blockAlign: 0, // 32   2    NumChannels*BitsPerSample/8
+      bitsPerSample: 8, // 34   2    8 bits = 8, 16 bits = 16
+      subChunk2Id: [0x64, 0x61, 0x74, 0x61], // 36   4    "data" = 0x64617461
+      subChunk2Size: 0 // 40   4    data size = NumSamples*NumChannels*BitsPerSample/8
+    };
+
+    function u32ToArray(i) {
+      return [i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF];
+    }
+
+    function u16ToArray(i) {
+      return [i & 0xFF, (i >> 8) & 0xFF];
+    }
+
+    function split16bitArray(data) {
+      var r = [];
+      var j = 0;
+      var len = data.length;
+      for (var i = 0; i < len; i++) {
+        r[j++] = data[i] & 0xFF;
+        r[j++] = (data[i] >> 8) & 0xFF;
+      }
+      return r;
+    }
+    this.Make = function(data) {
+      if (data instanceof Array) this.data = data;
+      this.header.blockAlign = (this.header.numChannels * this.header.bitsPerSample) >> 3;
+      this.header.byteRate = this.header.blockAlign * this.sampleRate;
+      this.header.subChunk2Size = this.data.length * (this.header.bitsPerSample >> 3);
+      this.header.chunkSize = 36 + this.header.subChunk2Size;
+
+      this.wav = this.header.chunkId.concat(
+        u32ToArray(this.header.chunkSize),
+        this.header.format,
+        this.header.subChunk1Id,
+        u32ToArray(this.header.subChunk1Size),
+        u16ToArray(this.header.audioFormat),
+        u16ToArray(this.header.numChannels),
+        u32ToArray(this.header.sampleRate),
+        u32ToArray(this.header.byteRate),
+        u16ToArray(this.header.blockAlign),
+        u16ToArray(this.header.bitsPerSample),
+        this.header.subChunk2Id,
+        u32ToArray(this.header.subChunk2Size),
+        (this.header.bitsPerSample == 16) ? split16bitArray(this.data) : this.data
+      );
+      this.dataURI = 'data:audio/wav;base64,' + FastBase64.Encode(this.wav);
+    };
+
+    if (data instanceof Array) this.Make(data);
+
+  }; // end RIFFWAVE
+
+
+  var canvas = document.getElementsByTagName("canvas")[0];
+  var context = canvas.getContext("2d");
+
+  /* sound generation */
+  function generateSamples(sampleRate, sampleN, freq, scaleFactor) {
+    var samples = new Array(sampleN);
+    if (false) {
+      for (var i = 0; i < sampleN; i++) {
+        var t = i / sampleRate;
+        samples[i] = Math.sin(Math.pow(5 * 2 * Math.PI * (1 - t), 3.6)) / scaleFactor;
+      }
+    }
+    for (var i = 0; i < sampleN; i++) {
+      var t = i / sampleN; // time from 0 to 1
+      // Generate samples (between 0 and 255)
+      samples[i] = Math.sin(freq * 2 * Math.PI * t);
+    }
+    return (samples);
+  }
+
+  function normalize_invalid_values(samples) {
+    for (var i = 0, len = samples.length; i < len; i++) {
+      if (samples[i] > 1) {
+        samples[i] = 1;
+      } else if (samples[i] < -1) {
+        samples[i] = -1;
+      }
+    }
+  }
+
+  function convert255(data) {
+    var data_0_255 = [];
+    for (var i = 0; i < data.length; i++) {
+      data_0_255[i] = 128 + Math.round(127 * data[i]);
+    }
+    return data_0_255;
+  }
+
+  function createAudio() {
+    function genAudio(frequency, scaleFactor, numberOfSamples) {
+      var sampleRate = 44100;
+      var samples = generateSamples(sampleRate, numberOfSamples, frequency, scaleFactor); //new Float32Array(samples_length); 
+      normalize_invalid_values(samples); // keep samples between [-1, +1]
+      var wave = new RIFFWAVE();
+
+      wave.header.sampleRate = sampleRate;
+      wave.header.numChannels = 1;
+      var audio = new Audio();
+      var samples2 = convert255(samples);
+
+      wave.Make(samples2);
+      audio.src = wave.dataURI;
+      return (audio);
+    }
+    var myAudio = new Array(5);
+    myAudio[0] = genAudio(5, 1, 500);
+    myAudio[1] = genAudio(10, Math.sqrt(2), 500);
+    myAudio[2] = genAudio(15, 2., 500);
+    myAudio[3] = genAudio(25, 2. * Math.sqrt(2), 500);
+    myAudio[4] = genAudio(555, 2. * 2., 5555);
+    for (var i = 0; i < 5; i++) {
+      myAudio[i].volume = 0.1;
+    }
+    return (myAudio);
+  }
+
+  var audio = createAudio(); //var audio = new Audio('beep3.mp3');
+
+  function resetAnimation() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var seqLen = 3;
+
+    quadFlag = new Array(seqLen);
+    for (var i = 0; i < seqLen; i++) {
+      quadFlag[i] = new Array(4);
+      for (var j = 0; j < 4; j++) {
+        quadFlag[i][j] = true;
+      }
+    }
+    /* generate random symbol
+    for(var i=0; i<seqLen; i++){
+      do{   //randomize at least once.. 
+        for(var j=0; j<4; j++){
+          quadFlag[i][j]=(Math.random()<0.5);
+        }
+      }while(repeatsLast(i)); //randomize again until there is no longer a pairwise repeat, if there is one.
+    }   */
+  }
+
+  resetAnimation();
+  var movingAverage = 0.;
+  var t1 = window.performance.now(); /* time stamp.... */
+  var i = 0;
+
+  /*   load images... */
+  nImages = 12;
+  var images = new Array(nImages);
+  for (var j = 0; j < nImages; j++) {
+    fileName = ("images/image" + (j < 10 ? "0" : "")) + (j.toString()) + ".jpg";
+    images[j] = new Image();
+    images[j].src = fileName;
+  }
+
+  /*  animation loop  */
+  function frame() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    /* check keyboard 
+    var wasdPressed = [ 
+      (keyboard['W'] || keyboard['w'] ),
+      (keyboard['A'] || keyboard['a'] ),
+      (keyboard['S'] || keyboard['s'] ),
+      (keyboard['D'] || keyboard['d'] ) 
+    ];
+    */
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    document.bgColor = "#FFFFFF"; //"#000000"
+    function rad(degrees) {
+      return (degrees * Math.PI) / 180;
+    }
+
+    /* update physics */
+    /* set up the pen! */
+    //context.strokeStyle="red";//"#FFFFFF";
+    context.lineWidth = 2; //circleWidth;
+
+    var t2 = window.performance.now(); //console.timeEnd("frameTime");
+    movingAverage = (movingAverage + (t2 - t1)) / 2.;
+    //estBPM = 30000. /( pW * movingAverage);
+    i += 1;
+    k = 0;
+    for (var j = 0; j < nImages; j++) {
+      context.drawImage(images[j], (j % 5) * 200 + ((j % 5) * 10), (k % 10) * 200 + (k % 10) * 10, 200, 200);
+      if (j % 5 == 4) k += 1;
+    }
+
+    if (i % 100 == 0) {
+      console.log(movingAverage.toString().concat(" mS = ").concat((1. / (movingAverage / 1000.))).concat(" fpS"));
+
+    }
+    if (i % 1000 == 0) {
+      audio[0].play();
+      // console.log(1movingAverage.toString().concat(" mS") );    
+    }
+    t1 = t2;
+  } /* function FRAME */
+  var id = setInterval(frame, 0); //http://javascript.info/tutorial/settimeout-setinterval
+</script>
+
+</html>
