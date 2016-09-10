@@ -30,6 +30,13 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     images[j].src = fileName;
   }
 
+/* load the images...  */
+  var negImages = new Array(nImages);
+  for (var j = 0; j < nImages; j++) {
+    fileName = ("images/image" + (j < 10 ? "0" : "")) + (j.toString()) + ".jpg-inverted.jpg";
+    negImages[j] = new Image();
+    negImages[j].src = fileName;
+  }
 
 
   var screenHeight = screen.height;
@@ -307,17 +314,53 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
   var imageSize = 200; /* default square image display size (treat images as if they were square). */
   var imagesPerRow = 4; //default number of columns for grid image display... 
   var nRows, nCols; 
+  var imageXhi = new Array(nImages);
+  var imageXlo = new Array(nImages);
+  var imageYhi = new Array(nImages);
+  var imageYlo = new Array(nImages);
+  var isPicked = new Array(nImages);
 
-  canvas.addEventListener("mousedown", function(e){
-        if(e.clientX <= 0){
-        }
-        if(e.clientY <= 0){
-        }
-
+  for(var j=0; j<nImages; j++){
+    isPicked[j] = false;
+    /* don't record the coordinate boundaries for an image
+        unless it's plotted... */
+    imageXhi[j] = imageXlo[j] = imageYhi[j] = imageYlo[j] = -1;
+  }
+  
+  canvas.addEventListener("mousedown", function(e){  /* e.clientX, e.clientY */
+    /* mouse down event listener code... */ 
+    var arr = [ ] ;
+    var x = e.clientX;  
+    var y = e.clientY; 
+    for(var j=0; j<nImages; j++){
+      if( imageXlo[j]<=x && x<= imageXhi[j]){
+        if( imageYlo[j]<=y && y<= imageYhi[j]){
+          arr.push( j);
+          isPicked[j]= true;
+          return;
+        } 
+      } 
+    }
+    if( arr.length >0){ 
+     // alert( isPicked.toString()) 
+      /* picked something... don't do anything about it here. */
+    }
+ 
   });
+
+  canvas.addEventListener("mouseup", function(e){  /* e.clientX, e.clientY */
+    /* mouse up event listener code... */ 
+    for(var j=0; j<nImages; j++){
+      isPicked[j] = false;
+    }
+  });
+
+
+
 
   /*  animation loop  */
   function frame() {
+
     /* check keyboard  ? 
     var wasdPressed = [ 
       (keyboard['W'] || keyboard['w'] ),
@@ -344,7 +387,16 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     for (var j = 0; j < nImages; j++) {
       var imageX = (j % imagesPerRow) * imageSize + ((j % imagesPerRow) * imageSpacing);
       var imageY = (k % nImages) * imageSize + (k % nImages)*imageSpacing;
-      context.drawImage( images[j], imageX, imageY, imageSize, imageSize);
+        //context.drawImage( isPicked[j]?negImages[j]:images[j], imageX, imageY, imageSize, imageSize);
+        if( isPicked[j]==false){
+          context.drawImage( images[j], imageX, imageY, imageSize, imageSize);
+        }else{
+          context.drawImage( negImages[j], imageX, imageY, imageSize, imageSize);
+        }
+        /* record the rectangle coordinates for picking... */
+        imageXlo[j] = imageX; imageXhi[j] = imageX + imageSize-1;
+        imageYlo[j] = imageY; imageYhi[j] = imageY + imageSize-1;
+
       if (j % imagesPerRow == (imagesPerRow-1)){
         k += 1;
       }
