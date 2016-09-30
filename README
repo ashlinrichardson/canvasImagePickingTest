@@ -1,1 +1,9 @@
 by ashlin richardson
+
+Dynamically display images on an HTML5 canvas, 
+- detecting the window size
+- using the detected window size and image parameters 
+	to set effective parameters for positioning the image 
+	on a grid. 
+- using picking to select an image from the grid. 
+- picked images are displayed as inverted.  
