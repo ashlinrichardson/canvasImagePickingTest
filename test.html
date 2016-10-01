@@ -341,6 +341,7 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
         if( imageYlo[j]<=y && y<= imageYhi[j]){
           arr.push( j);
           isPicked[j]= true;
+          audio[1].play();
           var t4 = window.performance.now(); 
           //console.log(  (Math.ceil((t4-t0)/1000.)).toString() + " S elapsed. picked: "+j.toString());  
           return;
