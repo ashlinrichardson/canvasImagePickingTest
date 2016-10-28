@@ -412,7 +412,7 @@ var imageSpacing = 10; // spacing (number of pixels) between images displayed on
     t2 = window.performance.now(); 
     movingAverage = (movingAverage + (t2 - t1)) / 2.;
     if (i % 100 == 0) {
-      if(false)console.log(movingAverage.toString().concat(" mS = ").concat((1. / (movingAverage / 1000.))).concat(" fpS"));
+      if(false)console.log(movingAverage.toString()+(' mS = ')+((1./(movingAverage/1000.)))+(' fpS'));
 
     }
     t1 = t2;
